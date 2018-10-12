@@ -9,12 +9,27 @@ public:
 	Window_icon(HWND);
 	Window_icon(const Window_icon&) = delete;
 
-	Window_icon(Window_icon&&) noexcept;
-	Window_icon& operator=(Window_icon&&) noexcept;
+	Window_icon(Window_icon&& other) noexcept
+	{
+		std::swap(icon_, other.icon_);
+	}
 
-	~Window_icon();
+	Window_icon& operator=(Window_icon&& other) noexcept
+	{
+		std::swap(icon_, other.icon_);
+		return *this;
+	}
 
-	HBITMAP Handle() const;
+	~Window_icon()
+	{
+		if (icon_ != NULL)
+			DeleteObject(icon_);
+	}
+
+	HBITMAP Handle() const
+	{
+		return icon_;
+	}
 
 private:
 	HBITMAP icon_ = NULL;
@@ -28,11 +43,28 @@ public:
 
 	Window& operator=(Window&&) noexcept;
 
-	HWND Handle() const;
-	CString Title() const;
-	HBITMAP IconHandle() const;
+	HWND Handle() const
+	{
+		return wnd_;
+	}
 
-	bool operator<(const Window&) const;
+	CString Title() const
+	{
+		return is_minimized_ ? ('*' + title_) : title_;
+	}
+
+	HBITMAP IconHandle() const
+	{
+		return icon_.Handle();
+	}
+
+	bool operator<(const Window& other) const
+	{
+		if (pid_ != other.pid_)
+			return title_.CompareNoCase(other.title_) < 0;
+		else
+			return false;
+	}
 
 private:
 	HWND wnd_;
@@ -41,8 +73,6 @@ private:
 	Window_icon icon_;
 	bool is_minimized_;
 };
-
-//////////////////////////////////////////////////////////////////////////
 
 Window_icon::Window_icon(HWND wnd)
 {
@@ -76,32 +106,7 @@ Window_icon::Window_icon(HWND wnd)
 	ReleaseDC(NULL, screen);
 }
 
-Window_icon::Window_icon(Window_icon&& other) noexcept
-{
-	std::swap(icon_, other.icon_);
-}
-
-Window_icon& Window_icon::operator=(Window_icon&& other) noexcept
-{
-	std::swap(icon_, other.icon_);
-	return *this;
-}
-
-Window_icon::~Window_icon()
-{
-	if (icon_ != NULL)
-		DeleteObject(icon_);
-}
-
-HBITMAP Window_icon::Handle() const
-{
-	return icon_;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-Window::Window(HWND wnd)
-	: wnd_(wnd), icon_(Window_icon(wnd))
+Window::Window(HWND wnd) : wnd_(wnd), icon_(Window_icon(wnd))
 {
 	auto len = GetWindowTextLength(wnd);
 	GetWindowText(wnd, title_.GetBufferSetLength(len), len + 1);
@@ -129,29 +134,6 @@ Window& Window::operator=(Window&& other) noexcept
 	is_minimized_ = other.is_minimized_;
 	std::swap(icon_, other.icon_);
 	return *this;
-}
-
-HWND Window::Handle() const
-{
-	return wnd_;
-}
-
-CString Window::Title() const
-{
-	return is_minimized_ ? ('*' + title_) : title_;
-}
-
-HBITMAP Window::IconHandle() const
-{
-	return icon_.Handle();
-}
-
-bool Window::operator<(const Window& other) const
-{
-	if (pid_ != other.pid_)
-		return title_.CompareNoCase(other.title_) < 0;
-	else
-		return false;
 }
 
 //////////////////////////////////////////////////////////////////////////
